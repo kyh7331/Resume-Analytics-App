@@ -1,0 +1,16 @@
+# API Keys & Secrets
+.env
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Local LLM / Large files
+*.bin
+*.gguf
+
+# OS
+.DS_Store
