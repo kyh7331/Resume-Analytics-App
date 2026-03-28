@@ -2,6 +2,18 @@ import streamlit as st
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
+import anthropic
+from openai import OpenAI
+
+# 로컬 LLM
+llm_client = OpenAI(
+    base_url="http://localhost:1234/v1",
+    api_key="lm-studio"
+)
+
+# Claude API (프롬프트 최적화 단계)
+# llm_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
 
 load_dotenv()
 supabase: Client = create_client(
@@ -15,6 +27,9 @@ st.set_page_config(
     layout="wide"
 )
 st.title("📋 지원 이력")
+
+lang = st.sidebar.radio("Analysis Language", ["한국어", "English"], horizontal=True)
+
 # 세션 복구
 if not st.session_state.get("user"):
     try:
@@ -47,6 +62,57 @@ def load_applications():
     except Exception as e:
         st.error(f"지원 이력 로드 오류: {e}")
         return []
+
+def get_rejection_feedback(analysis, jd, company, position, lang="English"):
+    if lang == "English":
+        system_prompt = """You are a honest career advisor. Analyze why a candidate was likely rejected and provide actionable feedback. Be concise and direct. No sugarcoating."""
+        user_message = f"""
+This candidate applied to {company} - {position} but was rejected.
+
+Previous Analysis:
+{analysis[:2000]}
+
+Job Description:
+{jd[:1000]}
+
+Provide ONLY:
+**Likely Rejection Reasons:**
+- (2-3 keywords/short phrases)
+
+**Improve For Next Time:**
+- (2-3 specific actionable items)
+"""
+    else:
+        system_prompt = """당신은 솔직한 커리어 어드바이저입니다. 지원자가 왜 탈락했는지 분석하고 실질적인 피드백을 제공하세요. 간결하고 직접적으로. 과도한 긍정 표현 금지."""
+        user_message = f"""
+이 지원자는 {company} - {position}에 지원했지만 탈락했습니다.
+
+이전 분석 결과:
+{analysis[:2000]}
+
+Job Description:
+{jd[:1000]}
+
+아래 형식으로만 답변하세요:
+**탈락 예상 원인:**
+- (2-3개 키워드/짧은 문장)
+
+**다음 지원을 위한 개선점:**
+- (2-3개 구체적인 실행 항목)
+"""
+
+    try:
+        response = llm_client.chat.completions.create(
+            model="gemma-3-27b",
+            max_tokens=500,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error: {e}"
 
 def update_application_status(application_id, status, notes=""):
     try:
@@ -96,5 +162,21 @@ else:
                 st.write(f"**메모:** {app['notes']}")
             
             if app.get("analysis_result"):
-                with st.expander("📊 분석 결과 보기"):
+                with st.expander("📊 View Analysis"):
                     st.markdown(app['analysis_result'])
+            
+            if app.get("status") == "rejected":
+                if st.button("🔍 Get Rejection Feedback", key=f"btn_feedback_{app['id']}"):
+                    with st.spinner("Analyzing rejection..."):
+                        feedback = get_rejection_feedback(
+                            analysis=app.get("analysis_result", ""),
+                            jd=app.get("jd_text", ""),
+                            company=app.get("company_name", ""),
+                            position=app.get("job_title", ""),
+                            lang=lang
+                        )
+                        st.session_state[f"result_feedback_{app['id']}"] = feedback
+                
+                if st.session_state.get(f"result_feedback_{app['id']}"):
+                    st.markdown("#### 💡 Rejection Feedback")
+                    st.markdown(st.session_state[f"result_feedback_{app['id']}"])

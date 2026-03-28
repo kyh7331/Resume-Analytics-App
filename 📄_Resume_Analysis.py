@@ -11,6 +11,8 @@ from pathlib import Path
 from supabase import create_client, Client
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+import pytz
 
 load_dotenv()
 # Auth 상태 초기화
@@ -94,6 +96,8 @@ def save_master_resume(content):
 
 def save_application(company, position, jd, analysis, resume):
     try:
+        et = pytz.timezone("America/New_York")
+        now_et = datetime.now(et)
         response = supabase.table("applications").insert({
             "company_name": company,
             "job_title": position,
@@ -101,6 +105,7 @@ def save_application(company, position, jd, analysis, resume):
             "analysis_result": analysis,
             "resume_version": resume,
             "status": "applied",
+            "applied_date": now_et.strftime("%Y-%m-%d"),
         }).execute()
         return response.data[0]["id"]
     except Exception as e:
@@ -130,14 +135,14 @@ def update_application_status(application_id, status, notes=""):
         st.error(f"Error updating status: {e}")
 
 # Claude API
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+#client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # 로컬 LLM (개발 단계에서 사용)
-#from openai import OpenAI
-#client = OpenAI(
-#    base_url="http://localhost:1234/v1",
-#    api_key="lm-studio"
-# )
+from openai import OpenAI
+client = OpenAI(
+    base_url="http://localhost:1234/v1",
+    api_key="lm-studio"
+ )
 
 st.set_page_config(page_title="Resume Analyzer", page_icon="📄", layout="wide")
 
@@ -158,7 +163,14 @@ if "experiences" not in st.session_state:
 if "user_profile" not in st.session_state:
     st.session_state.user_profile = load_user_profile()
 
-with st.form("experience_form"):
+if "form_key" not in st.session_state:
+    st.session_state.form_key = 0
+
+if st.session_state.get("form_success"):
+    st.success("Experience added!")
+    st.session_state.form_success = False
+
+with st.form(key=f"experience_form_{st.session_state.form_key}"):
     st.markdown("#### Add Experience")
     col1, col2 = st.columns(2)
     with col1:
@@ -187,7 +199,9 @@ with st.form("experience_form"):
             }
             save_experience(experience)
             st.session_state.experiences = load_experiences()
-            st.success("Experience added!")
+            st.session_state.form_key += 1
+            st.session_state.form_success = True
+            st.rerun()
         else:
             st.error("Please fill in all required (*) fields.")
 
@@ -391,15 +405,17 @@ Results must follow this exact format. Do not change section titles:
 **Location:** [current] → [target] | [Commutable/Relocation Required/Remote-OK]
 
 ## 📊 Resume Fit
-**Overall Assessment:** (Strong/Moderate/Weak + one line summary)
-**Strengths:**
-- (3-5 specific strengths and why they matter for this role)
-**Critical Gaps:**
-- (None if none, otherwise explain specific impact)
-**Areas to Improve:**
-- (Non-critical but worth addressing)
-**Remove/Reduce:**
-- (Irrelevant or harmful resume items. None if none)
+**Overall:** (Strong/Moderate/Weak) | (one line summary)
+**Strengths:** (one line: what matches JD)
+- (keyword 1)
+- (keyword 2)
+- (keyword 3)
+**Critical Gaps:** (one line: what JD requires but resume lacks)
+- (gap 1)
+- (gap 2)
+**Improvement Direction:** (1-2 sentences on how to reframe the resume)
+**Remove/Reduce:** (item name + one keyword reason)
+- (item): (reason keyword)
 
 ## 💡 Experience DB Recommendations
 (Experiences not in resume but worth adding from the DB. None if none)
@@ -456,15 +472,17 @@ Results must follow this exact format. Do not change section titles:
 **Location:** [현재] → [근무지] | [출퇴근가능/Relocation필요/Remote-OK]
 
 ## 📊 이력서 적합도
-**종합 평가:** (상/중/하 + 한 줄 요약)
-**강점:**
-- (구체적인 강점 3-5가지, 단순 나열 말고 왜 이 포지션에 유리한지 설명)
-**치명적 공백:**
-- (없으면 "없음", 있으면 구체적으로 어떤 임팩트가 있는지 설명)
-**보완 가능한 약점:**
-- (치명적이진 않지만 보완하면 좋을 것들)
-**제거/축소 권장 항목:**
-- (JD와 무관하거나 방해가 되는 경력/프로젝트. 없으면 "없음")
+**종합 평가:** (상/중/하) | (한 줄 요약)
+**강점:** (JD와 일치하는 핵심 역량 한 줄 요약)
+- (키워드 1)
+- (키워드 2)
+- (키워드 3)
+**치명적 공백:** (JD에서 요구하지만 이력서에 없는 것 한 줄 요약)
+- (공백 1)
+- (공백 2)
+**보완 방향:** (이력서에서 어떤 방향으로 수정하면 좋은지 1-2문장)
+**제거/축소 권장:** (항목명 + 이유 한 단어)
+- (항목명): (이유 키워드)
 
 ## 💡 경력 DB 추천
 (이력서에 없지만 경력 DB에서 추가하면 도움될 경력. 없으면 "해당 없음")
@@ -522,29 +540,29 @@ Results must follow this exact format. Do not change section titles:
 {jd}"""
 
     # Claude API 스트리밍
-    with client.messages.stream(
-        model="claude-sonnet-4-5",
-        max_tokens=3000,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}]
-    ) as stream:
-        for text in stream.text_stream:
-            yield text
+    #with client.messages.stream(
+    #    model="claude-sonnet-4-5",
+    #    max_tokens=3000,
+    #    system=system_prompt,
+    #    messages=[{"role": "user", "content": user_message}]
+    #) as stream:
+    #    for text in stream.text_stream:
+    #        yield text
     
     # OpenAI SDK 스트리밍
-    #stream = client.chat.completions.create(
-    #    model="gemma-3-27b",
-    #    max_tokens=5000,
-    #    messages=[
-    #        {"role": "system", "content": system_prompt},
-    #        {"role": "user", "content": user_message}
-    #    ],
-    #    stream=True
-    #)
-    #
-    #for chunk in stream:
-    #    if chunk.choices[0].delta.content is not None:
-    #        yield chunk.choices[0].delta.content
+    stream = client.chat.completions.create(
+        model="gemma-3-27b",
+        max_tokens=5000,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ],
+        stream=True
+    )
+    
+    for chunk in stream:
+        if chunk.choices[0].delta.content is not None:
+            yield chunk.choices[0].delta.content
 
 # ── Analyze Button ───────────────────────────────────────────
 if st.button("🔍 Analyze", type="primary"):
@@ -692,7 +710,7 @@ if "result" in st.session_state:
                 company=st.session_state.get("company_name", ""),
                 position=st.session_state.get("job_title", ""),
                 jd=st.session_state.get("jd_text", ""),
-                analysis=st.session_state.result,
+                analysis=format_result(st.session_state.result),
                 resume=st.session_state.get("resume_text", "")
             )
             if app_id:
