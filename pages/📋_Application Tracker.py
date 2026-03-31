@@ -5,16 +5,17 @@ import os
 import anthropic
 from openai import OpenAI
 
-# 로컬 LLM
-llm_client = OpenAI(
-    base_url="http://localhost:1234/v1",
-    api_key="lm-studio"
-)
+LLM_MODE = os.getenv("LLM_MODE", "local")
 
-# Claude API (프롬프트 최적화 단계)
-# llm_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-
+if LLM_MODE == "claude":
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+else:
+    from openai import OpenAI
+    client = OpenAI(
+        base_url="http://localhost:1234/v1",
+        api_key="lm-studio"
+    )
+    
 load_dotenv()
 supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
@@ -101,7 +102,15 @@ Job Description:
 - (2-3개 구체적인 실행 항목)
 """
 
-    try:
+    if LLM_MODE == "claude":
+        response = llm_client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=500,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}]
+        )
+        return response.content[0].text
+    else:
         response = llm_client.chat.completions.create(
             model="gemma-3-27b",
             max_tokens=500,
@@ -111,8 +120,6 @@ Job Description:
             ]
         )
         return response.choices[0].message.content
-    except Exception as e:
-        return f"Error: {e}"
 
 def update_application_status(application_id, status, notes=""):
     try:

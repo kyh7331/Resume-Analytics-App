@@ -134,15 +134,16 @@ def update_application_status(application_id, status, notes=""):
     except Exception as e:
         st.error(f"Error updating status: {e}")
 
-# Claude API
-#client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+LLM_MODE = os.getenv("LLM_MODE", "local")
 
-# 로컬 LLM (개발 단계에서 사용)
-from openai import OpenAI
-client = OpenAI(
-    base_url="http://localhost:1234/v1",
-    api_key="lm-studio"
- )
+if LLM_MODE == "claude":
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+else:
+    from openai import OpenAI
+    client = OpenAI(
+        base_url="http://localhost:1234/v1",
+        api_key="lm-studio"
+    )
 
 st.set_page_config(page_title="Resume Analyzer", page_icon="📄", layout="wide")
 
@@ -539,30 +540,28 @@ Results must follow this exact format. Do not change section titles:
 **Job Description:**
 {jd}"""
 
-    # Claude API 스트리밍
-    #with client.messages.stream(
-    #    model="claude-sonnet-4-5",
-    #    max_tokens=3000,
-    #    system=system_prompt,
-    #    messages=[{"role": "user", "content": user_message}]
-    #) as stream:
-    #    for text in stream.text_stream:
-    #        yield text
-    
-    # OpenAI SDK 스트리밍
-    stream = client.chat.completions.create(
-        model="gemma-3-27b",
-        max_tokens=5000,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ],
-        stream=True
-    )
-    
-    for chunk in stream:
-        if chunk.choices[0].delta.content is not None:
-            yield chunk.choices[0].delta.content
+    if LLM_MODE == "claude":
+        with client.messages.stream(
+            model="claude-sonnet-4-5",
+            max_tokens=3000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}]
+        ) as stream:
+            for text in stream.text_stream:
+                yield text
+    else:
+        stream = client.chat.completions.create(
+            model="gemma-3-27b",
+            max_tokens=3000,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            stream=True
+        )
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                yield chunk.choices[0].delta.content
 
 # ── Analyze Button ───────────────────────────────────────────
 if st.button("🔍 Analyze", type="primary"):
@@ -630,6 +629,16 @@ def format_result(text):
         (" | Level:", "\n\n**Level:**"),
         (" | Key", "\n\n**Key"),
         (" | Top", "\n\n**Top"),
+        # 이력서 적합도 - 한글
+        ("**강점:**", "\n\n**강점:**"),
+        ("**치명적 공백:**", "\n\n**치명적 공백:**"),
+        ("**보완 방향:**", "\n\n**보완 방향:**"),
+        ("**제거/축소 권장:**", "\n\n**제거/축소 권장:**"),
+        # 이력서 적합도 - 영문
+        ("**Strengths:**", "\n\n**Strengths:**"),
+        ("**Critical Gaps:**", "\n\n**Critical Gaps:**"),
+        ("**Improvement Direction:**", "\n\n**Improvement Direction:**"),
+        ("**Remove/Reduce:**", "\n\n**Remove/Reduce:**"),
     ]
     for old, new in replacements:
         text = text.replace(old, new)
