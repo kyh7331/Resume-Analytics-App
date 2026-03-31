@@ -65,7 +65,6 @@ with st.form("profile_form"):
         value=profile.get("relocation_cities", ""),
         placeholder="e.g. Charlotte NC, Austin TX, New York NY"
     )
-    )
 
     require_sponsorship = st.selectbox(
         "Will you require sponsorship?",
