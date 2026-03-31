@@ -61,9 +61,10 @@ with st.form("profile_form"):
     )
 
     relocation_cities = st.text_input(
-        "Preferred Relocation Cities (if any)",
+        "Preferred Relocation Cities (comma separated)",
         value=profile.get("relocation_cities", ""),
-        placeholder="e.g. Charlotte NC, Austin TX"
+        placeholder="e.g. Charlotte NC, Austin TX, New York NY"
+    )
     )
 
     require_sponsorship = st.selectbox(
