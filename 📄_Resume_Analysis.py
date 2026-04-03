@@ -573,7 +573,7 @@ Results must follow this exact format. Do not change section titles:
                 yield text
     else:
         stream = client.chat.completions.create(
-            model="gemma-3-27b",
+            model="gemma-4-26b",
             max_tokens=3000,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -651,16 +651,21 @@ def format_result(text):
         (" | Level:", "\n\n**Level:**"),
         (" | Key", "\n\n**Key"),
         (" | Top", "\n\n**Top"),
-        # 이력서 적합도 - 한글
-        ("**강점:**", "\n\n**강점:**"),
-        ("**치명적 공백:**", "\n\n**치명적 공백:**"),
-        ("**보완 방향:**", "\n\n**보완 방향:**"),
-        ("**제거/축소 권장:**", "\n\n**제거/축소 권장:**"),
         # 이력서 적합도 - 영문
         ("**Strengths:**", "\n\n**Strengths:**"),
         ("**Critical Gaps:**", "\n\n**Critical Gaps:**"),
         ("**Improvement Direction:**", "\n\n**Improvement Direction:**"),
         ("**Remove/Reduce:**", "\n\n**Remove/Reduce:**"),
+        # 최종 평가 - 한글
+        ("**현재 서류 통과 확률:**", "\n\n**현재 서류 통과 확률:**"),
+        ("**수정 후 예상 확률:**", "\n\n**수정 후 예상 확률:**"),
+        ("**핵심 변수:**", "\n\n**핵심 변수:**"),
+        ("**최종 조언:**", "\n\n**최종 조언:**"),
+        # 최종 평가 - 영문
+        ("**Current pass rate estimate:**", "\n\n**Current pass rate estimate:**"),
+        ("**Post-edit estimate:**", "\n\n**Post-edit estimate:**"),
+        ("**Key variable:**", "\n\n**Key variable:**"),
+        ("**Final advice:**", "\n\n**Final advice:**"),
     ]
     for old, new in replacements:
         text = text.replace(old, new)
