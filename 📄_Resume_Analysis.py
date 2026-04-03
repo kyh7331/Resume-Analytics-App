@@ -387,6 +387,10 @@ Analysis Rules:
    - For removing entire positions, be conservative. Use "consider removing" language only.
    - For specific bullets or projects, actively recommend removal if irrelevant.
 8. When suggesting resume edits, first analyze the existing writing style, vocabulary level, and sentence length. Match that style exactly so edits feel natural and not AI-generated.
+9. Classify JD industry proximity as High (same industry) / Functional (similar function) / Distant (different industry) and apply appropriate risk weighting.
+10. Prioritize business logic transferability over technical skills (e.g., financial risk modeling → pricing strategy in manufacturing).
+11. Evaluate immediate deployability strictly at senior level, but objectively assess learning curve combined with MBA background.
+12. No unjustified optimism or praise. Maintain realistic assessment based on data and market logic only.
 
 Results must follow this exact format. Do not change section titles:
 
@@ -429,7 +433,14 @@ Results must follow this exact format. Do not change section titles:
 - After: (revised English text)
 - Why: [keyword]
 
-(repeat for 5+ suggestions)"""
+(repeat for 5+ suggestions)
+
+## 🎯 Final Assessment
+**Current pass rate estimate:** (realistic %)
+**Post-edit estimate:** (if all suggestions applied)
+**Key variable:** (the single most critical factor)
+**Final advice:** (whether to apply, where to focus, 2-3 sentences)
+"""
 
     else:
         system_prompt = """당신은 미국 채용 시장에 정통한 현실적인 커리어 어드바이저입니다.
@@ -454,6 +465,10 @@ Results must follow this exact format. Do not change section titles:
    - 경력 전체 삭제는 신중하게 권장하세요. "제거 고려" 수준으로만 표현하세요.
    - 특정 프로젝트나 bullet point 축소/제거는 적극적으로 권장하세요.
 8. 이력서 수정 문구 제안 시 반드시 기존 이력서의 문체, 어휘 수준, 문장 길이를 먼저 분석하고 동일한 스타일을 유지하세요.
+9. JD 산업군을 High (동일 산업) / Functional (유사 기능) / Distant (다른 산업) 으로 분류하고 그에 맞는 리스크 가중치를 적용하세요.
+10. 단순 기술 스택보다 비즈니스 로직의 전이 가능성을 우선 평가하세요. (예: 금융 리스크 모델링 → 다른 산업의 가격 전략)
+11. 시니어 레벨 기준으로 즉시 투입 가능성은 엄격하게 평가하되, 도메인 학습 곡선을 MBA 경력과 결합해서 현실적으로 산출하세요.
+12. 근거 없는 낙관이나 칭찬 배제. 데이터와 시장 논리에 기반한 현실적 평가를 유지하세요.
 
 결과는 반드시 아래 형식을 정확히 따르세요. 섹션 제목을 절대 바꾸지 마세요:
 
@@ -496,7 +511,14 @@ Results must follow this exact format. Do not change section titles:
 - After: (수정된 영문 문구)
 - 이유: (왜 이렇게 바꾸는지 한국어로 단, 키워드 중심)
 
-(5개 이상 반복)"""
+(5개 이상 반복)
+
+## 🎯 최종 평가
+**현재 서류 통과 확률:** (현실적 % 추정)
+**수정 후 예상 확률:** (제안 전부 반영 시)
+**핵심 변수:** (통과 여부를 결정할 가장 중요한 단 하나의 요소)
+**최종 조언:** (지원할지 말지, 어디에 집중할지 2-3문장으로)
+"""
     # 프로필 컨텍스트 생성
     profile = st.session_state.get("user_profile", {})
     profile_context = ""
@@ -668,7 +690,8 @@ if "result" in st.session_state:
             "⚠️ Change Risk": "",
             "📊 Resume Fit": "",
             "💡 Experience DB Recommendations": "",
-            "✏️ Resume Edit Suggestions": ""
+            "✏️ Resume Edit Suggestions": "",
+            "🎯 Final Assessment": ""
         }
     else:
         sections = {
@@ -676,7 +699,8 @@ if "result" in st.session_state:
             "⚠️ 변경 리스크": "",
             "📊 이력서 적합도": "",
             "💡 경력 DB 추천": "",
-            "✏️ 이력서 수정 제안": ""
+            "✏️ 이력서 수정 제안": "",
+            "🎯 최종 평가": ""
         }
 
     current_section = None
@@ -761,11 +785,11 @@ if "result" in st.session_state:
         st.markdown(result)
     else:
         if lang == "English":
-            tab_labels = ["🏢 Position", "⚠️ Risk", "📊 Fit", "💡 DB Recs", "✏️ Edits"]
+            tab_labels = ["🏢 Position", "⚠️ Risk", "📊 Fit", "💡 DB Recs", "✏️ Edits", "🎯 Final"]
         else:
-            tab_labels = ["🏢 포지션 분석", "⚠️ 변경 리스크", "📊 적합도", "💡 경력 추천", "✏️ 문구 수정"]
+            tab_labels = ["🏢 포지션 분석", "⚠️ 변경 리스크", "📊 적합도", "💡 경력 추천", "✏️ 문구 수정", "🎯 최종 평가"]
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_labels)
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_labels)
         keys = list(sections.keys())
 
         with tab1:
@@ -807,3 +831,5 @@ if "result" in st.session_state:
                         Copy
                         </button>
                         """, height=35)
+        with tab6:
+            st.markdown(sections[keys[5]])
