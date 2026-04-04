@@ -312,31 +312,31 @@ if job_title:
 # ── Functions ────────────────────────────────────────────────
 st.markdown("---")
 
-def create_word_report(result, company, position):
-    doc = Document()
-    title = doc.add_heading("Resume Analysis Report", 0)
-    title.alignment = 1
-    doc.add_paragraph(f"Company: {company}")
-    doc.add_paragraph(f"Position: {position}")
-    doc.add_paragraph("")
-    for line in result.split("\n"):
-        line = line.strip()
-        if not line:
-            doc.add_paragraph("")
-        elif line.startswith("## "):
-            doc.add_heading(line.replace("## ", ""), level=1)
-        elif line.startswith("**") and line.endswith("**"):
-            p = doc.add_paragraph()
-            run = p.add_run(line.replace("**", ""))
-            run.bold = True
-        elif line.startswith("- "):
-            doc.add_paragraph(line.replace("- ", ""), style="List Bullet")
-        else:
-            doc.add_paragraph(line)
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+#def create_word_report(result, company, position):
+#    doc = Document()
+#    title = doc.add_heading("Resume Analysis Report", 0)
+#    title.alignment = 1
+#    doc.add_paragraph(f"Company: {company}")
+#    doc.add_paragraph(f"Position: {position}")
+#    doc.add_paragraph("")
+#    for line in result.split("\n"):
+#        line = line.strip()
+#        if not line:
+#            doc.add_paragraph("")
+#        elif line.startswith("## "):
+#            doc.add_heading(line.replace("## ", ""), level=1)
+#        elif line.startswith("**") and line.endswith("**"):
+#            p = doc.add_paragraph()
+#            run = p.add_run(line.replace("**", ""))
+#            run.bold = True
+#        elif line.startswith("- "):
+#            doc.add_paragraph(line.replace("- ", ""), style="List Bullet")
+#        else:
+#            doc.add_paragraph(line)
+#    buffer = io.BytesIO()
+#    doc.save(buffer)
+#    buffer.seek(0)
+#    return buffer
 
 def extract_pdf_text(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
@@ -344,15 +344,6 @@ def extract_pdf_text(pdf_file):
     for page in doc:
         text += page.get_text()
     return text
-
-with st.expander("🔍 PDF Parse Preview (Dev)"):
-    if resume_file and resume_file.size > 0:
-        try:
-            st.text(extract_pdf_text(resume_file))
-        except Exception as e:
-            st.error(f"PDF parsing error: {e}")
-    else:
-        st.info("Upload a PDF to preview parsed text.")
 
 def analyze(resume, jd, company, position, experiences, lang="한국어"):
     experience_text = ""
@@ -716,28 +707,23 @@ if "result" in st.session_state:
                 break
         if current_section:
             sections[current_section] += line + "\n"
-    
-    with st.expander("🔍 섹션 파싱 디버그"):
-        for k, v in sections.items():
-            st.write(f"**{k}:** {len(v)} chars")
-            st.write(v[:200] if v else "EMPTY")
 
     # Download
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        filename = f"{st.session_state.get('company_name', 'company')}_{st.session_state.get('job_title', 'position')}.docx"
-        filename = filename.replace(" ", "_")
-        word_file = create_word_report(
-            result=result,
-            company=st.session_state.get('company_name', ''),
-            position=st.session_state.get('job_title', '')
-        )
-        st.download_button(
-            label="📥 Download as Word",
-            data=word_file,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+#    col1, col2 = st.columns([1, 4])
+#    with col1:
+#        filename = f"{st.session_state.get('company_name', 'company')}_{st.session_state.get('job_title', 'position')}.docx"
+#        filename = filename.replace(" ", "_")
+#        word_file = create_word_report(
+#            result=result,
+#            company=st.session_state.get('company_name', ''),
+#            position=st.session_state.get('job_title', '')
+#        )
+#        st.download_button(
+#            label="📥 Download as Word",
+#            data=word_file,
+#            file_name=filename,
+#            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+#        )
 
     # Application tracking
     st.markdown("---")
