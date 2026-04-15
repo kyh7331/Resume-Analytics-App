@@ -103,17 +103,17 @@ Job Description:
 """
 
     if LLM_MODE == "claude":
-        response = llm_client.messages.create(
+        response = client.messages.create(
             model="claude-sonnet-4-5",
-            max_tokens=500,
+            max_tokens=1000,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}]
         )
         return response.content[0].text
     else:
-        response = llm_client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gemma-3-27b",
-            max_tokens=500,
+            max_tokens=1500,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
@@ -175,15 +175,24 @@ else:
             if app.get("status") == "rejected":
                 if st.button("🔍 Get Rejection Feedback", key=f"btn_feedback_{app['id']}"):
                     with st.spinner("Analyzing rejection..."):
-                        feedback = get_rejection_feedback(
-                            analysis=app.get("analysis_result", ""),
-                            jd=app.get("jd_text", ""),
-                            company=app.get("company_name", ""),
-                            position=app.get("job_title", ""),
-                            lang=lang
-                        )
-                        st.session_state[f"result_feedback_{app['id']}"] = feedback
-                
-                if st.session_state.get(f"result_feedback_{app['id']}"):
-                    st.markdown("#### 💡 Rejection Feedback")
-                    st.markdown(st.session_state[f"result_feedback_{app['id']}"])
+                        try:
+                            feedback = get_rejection_feedback(
+                                analysis=app.get("analysis_result", ""),
+                                jd=app.get("jd_text", ""),
+                                company=app.get("company_name", ""),
+                                position=app.get("job_title", ""),
+                                lang=lang
+                            )
+                            st.session_state[f"result_feedback_{app['id']}"] = feedback
+                        except Exception as e:
+                            st.error(f"에러: {e}")
+
+# expander 루프 끝난 후
+for app in applications:
+    feedback_key = f"result_feedback_{app['id']}"
+    if st.session_state.get(feedback_key):
+        st.markdown(f"### 💡 {app['company_name']} - {app['job_title']} Rejection Feedback")
+        st.markdown(st.session_state[feedback_key])
+        if st.button("닫기", key=f"close_feedback_{app['id']}"):
+            del st.session_state[feedback_key]
+            st.rerun()
